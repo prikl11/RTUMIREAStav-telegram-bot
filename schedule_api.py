@@ -190,3 +190,4 @@ def get_next_week_schedule(id_client: int, id_group: int):
             )
 
     return output.strip()
+
