@@ -21,6 +21,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• /tomorrow — расписание на завтра\n"
         "• /week — расписание на эту неделю\n"
         "• /nextweek — расписание на следующую неделю\n\n"
+        "Обратная связь:\nhttps://forms.gle/k1Bvjq5DxR4BQC1U7"
         )
 
 async def set_group(update: Update, context: ContextTypes.DEFAULT_TYPE):
