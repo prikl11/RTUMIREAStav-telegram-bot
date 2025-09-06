@@ -63,7 +63,7 @@ def get_schedule(id_client: int, id_group: int):
             lesson_date = datetime.strptime(lesson["date"], "%Y-%m-%d").date()
         except (ValueError, KeyError):
             continue
-        if today <= lesson_date <= week_end:
+        if start_of_week <= lesson_date <= week_end:
             schedule_by_date[lesson["date"]].append(lesson)
 
     if not schedule_by_date:
