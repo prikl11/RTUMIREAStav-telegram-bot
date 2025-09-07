@@ -5,17 +5,18 @@ from schedule_api import get_schedule, get_today_schedule, get_tomorrow_schedule
 import os
 from dotenv import load_dotenv
 from group_api import get_group_id
+from db import init_db, get_user_group_db, read_users, set_user_group_db
 
 load_dotenv()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    group_name = context.user_data.get("group_name")
-    if not group_name:
+    user_data = get_user_group_db(update.effective_user.id)
+    if not user_data:
         await update.message.reply_text("⚠️ Сначала укажите группу: /group <название группы>")
         return
 
     await update.message.reply_text(
-        f"Ваша группа: {group_name}\n\n"
+        f"Ваша группа: {user_data['group_name']}\n\n"
         "Команды бота:\n"
         "• /today — расписание на сегодня\n"
         "• /tomorrow — расписание на завтра\n"
@@ -36,16 +37,17 @@ async def set_group(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Такой группы не найдено.")
         return
 
-    context.user_data["group_id"] = group_id
-    context.user_data["group_name"] = group_name
-
+    set_user_group_db(update.effective_user.id, group_name, group_id)
     await update.message.reply_text(f"Ваша группа сохранена: {group_name}!")
 
-def get_user_group(context: ContextTypes.DEFAULT_TYPE):
-    return context.user_data.get("group_id")
+def get_user_group(user_id: int):
+    user_data = get_user_group_db(user_id)
+    if user_data:
+        return user_data["group_id"]
+    return None
 
 async def week(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    group_id = get_user_group(context)
+    group_id = get_user_group(update.effective_user.id)
     if not group_id:
         await update.message.reply_text("⚠️ Сначала укажите группу: /group <название группы>")
         return
@@ -54,7 +56,7 @@ async def week(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
 async def today(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    group_id = get_user_group(context)
+    group_id = get_user_group(update.effective_user.id)
     if not group_id:
         await update.message.reply_text("⚠️ Сначала укажите группу: /group <название группы>")
         return
@@ -63,7 +65,7 @@ async def today(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
 async def tomorrow(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    group_id = get_user_group(context)
+    group_id = get_user_group(update.effective_user.id)
     if not group_id:
         await update.message.reply_text("⚠️ Сначала укажите группу: /group <название группы>")
         return
@@ -72,7 +74,7 @@ async def tomorrow(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
 async def next_week(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    group_id = get_user_group(context)
+    group_id = get_user_group(update.effective_user.id)
     if not group_id:
         await update.message.reply_text("⚠️ Сначала укажите группу: /group <название группы>")
         return
@@ -84,9 +86,12 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         admin_id = int(os.getenv("ADMIN_ID"))
         if update.effective_user.id == admin_id:
             await update.message.reply_text(f"Количество пользователей: {read_users()}")
+            return
 
 
 if __name__ == "__main__":
+    init_db()
+
     TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
 
@@ -96,5 +101,6 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("tomorrow", tomorrow))
     app.add_handler(CommandHandler("nextweek", next_week))
     app.add_handler(CommandHandler("group", set_group))
+    app.add_handler(CommandHandler("stats", stats))
 
     app.run_polling()
