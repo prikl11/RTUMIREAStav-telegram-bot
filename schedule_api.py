@@ -57,6 +57,9 @@ def get_schedule(id_client: int, id_group: int):
     start_of_week = today - timedelta(days=today.weekday())
     week_end = start_of_week + timedelta(days=6)
 
+    if today.weekday() == 6:
+        return "Сегодня воскресенье😌\nИспользуйте /nextweek, чтобы посмотреть расписание на следующую неделю."
+
     schedule_by_date = defaultdict(list)
     for lesson in data:
         try:
