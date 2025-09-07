@@ -33,26 +33,3 @@ def set_user_group_db(user_id: int, group_name: str, group_id: int):
     """, (user_id, group_name, group_id))
     conn.commit()
     conn.close()
-
-def get_user_group_db(user_id: int):
-    conn = sqlite3.connect("users.db")
-    cursor = conn.cursor()
-    cursor.execute("SELECT group_name, group_id FROM users WHERE user_id=?", (user_id,))
-    row = cursor.fetchone()
-    conn.close()
-    if row:
-        return {"group_name": row[0], "group_id": row[1]}
-    return None
-
-import sqlite3
-
-conn = sqlite3.connect("C:\\Users\\Artem\\PycharmProjects\\schedulebot\\users.db")
-cursor = conn.cursor()
-
-cursor.execute("SELECT * FROM users")
-rows = cursor.fetchall()
-
-for row in rows:
-    print(row)
-
-conn.close()
