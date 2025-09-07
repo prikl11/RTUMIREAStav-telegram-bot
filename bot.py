@@ -80,6 +80,12 @@ async def next_week(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = get_next_week_schedule(id_client=3, id_group=group_id)
     await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
+async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        admin_id = int(os.getenv("ADMIN_ID"))
+        if update.effective_user.id == admin_id:
+            await update.message.reply_text(f"Количество пользователей: {read_users()}")
+
+
 if __name__ == "__main__":
     TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
