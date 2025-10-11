@@ -38,7 +38,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• /today — расписание на сегодня\n"
         "• /tomorrow — расписание на завтра\n"
         "• /week — расписание на эту неделю\n"
-        "• /nextweek — расписание на следующую неделю\n\n"
+        "• /nextweek — расписание на следующую неделю\n"
+        "• /prep <фамилия преподавателя> — расписание преподавателя на неделю\n\n"
         "Обратная связь:\nhttps://forms.gle/k1Bvjq5DxR4BQC1U7"
         )
 
