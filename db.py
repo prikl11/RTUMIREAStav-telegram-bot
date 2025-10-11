@@ -19,6 +19,20 @@ def init_db():
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
     );
     """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS preps (
+        prep_id INTEGER PRIMARY KEY,
+        prep_name TEXT
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS meta (
+        key TEXT PRIMARY KEY,
+        value TEXT
+    )
+    """)
     conn.commit()
     conn.close()
 
@@ -100,3 +114,26 @@ def get_user_group_db(user_id: int):
     if row:
         return {"group_name": row[0], "group_id": row[1]}
     return None
+
+def update_meta():
+    conn = sqlite3.connect("users.db")
+    cursor = conn.cursor()
+    cursor.execute("INSERT OR REPLACE INTO meta (key, value) VALUES ('preps_last_update', datetime('now'))")
+    conn.commit()
+    conn.close()
+
+def check_meta():
+    conn = sqlite3.connect("users.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT value FROM meta WHERE key='preps_last_update'")
+    last_update = cursor.fetchone()
+    conn.close()
+    return last_update
+
+def get_preps_id(prep_name: str):
+    conn = sqlite3.connect("users.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT prep_id FROM preps WHERE prep_name LIKE ?", (f"%{prep_name}%",))
+    row = cursor.fetchone()
+    conn.close()
+    return row[0] if row else None

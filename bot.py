@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from telegram.constants import ParseMode
@@ -5,10 +6,24 @@ from schedule_api import get_schedule, get_today_schedule, get_tomorrow_schedule
 import os
 from dotenv import load_dotenv
 from group_api import get_group_id
-from db import init_db, get_user_group_db, read_users, set_user_group_db, get_users_number_by_groups, log_usage, get_command_usage_number, get_count_command_usage, get_usage
+from db import init_db, get_user_group_db, read_users, set_user_group_db, get_users_number_by_groups, log_usage, get_command_usage_number, get_count_command_usage, get_usage, check_meta, update_meta, get_preps_id
 import asyncio
+from teacher_api import push_preps, get_prep_schedule
 
 load_dotenv()
+
+MAX_LEN = 4000
+
+async def send_long_message(update, text):
+    lines = text.split("\n")
+    chunk = ""
+    for line in lines:
+        if len(chunk) + len(line) + 1 > MAX_LEN:
+            await update.message.reply_text(chunk, parse_mode=ParseMode.HTML)
+            chunk = ""
+        chunk += line + "\n"
+    if chunk:
+        await update.message.reply_text(chunk, parse_mode=ParseMode.HTML)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     log_usage("/start")
@@ -115,6 +130,39 @@ async def commands_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await update.message.reply_text(message, parse_mode=ParseMode.HTML)
 
+async def get_teacher_rasp(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    log_usage("/prep")
+
+    if not context.args:
+        await update.message.reply_text("Введите /prep <фамилия преподавателя>")
+        return
+
+    prep_name = context.args[0]
+    prep_id = get_preps_id(prep_name)
+
+    if not prep_id:
+        await update.message.reply_text("Такого преподавателя нет")
+        return
+
+    text = get_prep_schedule(prep_id)
+    await send_long_message(update, text)
+
+async def periodic_update_preps(context: ContextTypes.DEFAULT_TYPE):
+    try:
+        last_update = check_meta()
+        now = datetime.now()
+
+        if last_update:
+            last_dt = datetime.fromisoformat(last_update[0])
+        else:
+            last_dt = datetime(1970, 1, 1)
+
+        if (now - last_dt).days >= 7:
+            push_preps()
+            update_meta()
+    except Exception as e:
+        print(f"ERROR: {e}")
+
 async def usage(update: Update, context: ContextTypes.DEFAULT_TYPE):
     admin_id = int(os.getenv("ADMIN_ID"))
     if update.effective_user.id == admin_id:
@@ -136,5 +184,9 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("stats", stats))
     app.add_handler(CommandHandler("commands", commands_stats))
     app.add_handler(CommandHandler("usage", usage))
+    app.add_handler(CommandHandler("prep", get_teacher_rasp))
+
+    job_queue = app.job_queue
+    job_queue.run_repeating(periodic_update_preps, interval=7 * 24 * 60 * 60, first=10)
 
     app.run_polling()
