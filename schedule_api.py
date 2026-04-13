@@ -2,25 +2,8 @@ from datetime import datetime, timedelta
 import requests
 from collections import defaultdict
 
-DAYS = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"]
+from constants import DAYS, LESSON_EMOJI_LIST, LESSON_TIME_LIST
 
-LESSON_TIME_LIST = {
-    "1": "8:15-9:45",
-    "2": "9:55-11:25",
-    "3": "11:35-13:05",
-    "4": "13:30-15:00",
-    "5": "15:10-16:40",
-    "6": "16:50-18:20"
-}
-
-LESSON_EMOJI_LIST = {
-    "1": "1️⃣",
-    "2": "2️⃣",
-    "3": "3️⃣",
-    "4": "4️⃣",
-    "5": "5️⃣",
-    "6": "6️⃣"
-}
 
 def fetch_schedule(id_client: int, id_group: int):
     url = "https://education-ks.ru/getrasp/ajax-dropdown-style"
@@ -86,6 +69,7 @@ def get_schedule(id_client: int, id_group: int):
 
     return output.strip()
 
+
 def get_today_schedule(id_client: int, id_group: int):
     data, error = fetch_schedule(id_client, id_group)
     if error:
@@ -116,6 +100,7 @@ def get_today_schedule(id_client: int, id_group: int):
         output += f"{emoji_str} {time_str} <b>{l['Disciplina']} ({l['nameDiscVid']})</b> · {l['namePrep']} · <b>{l['nameAud']}</b>\n"
 
     return output.strip()
+
 
 def get_tomorrow_schedule(id_client: int, id_group: int):
     data, error = fetch_schedule(id_client, id_group)
@@ -148,6 +133,7 @@ def get_tomorrow_schedule(id_client: int, id_group: int):
         output += f"{emoji_str} {time_str} <b>{l['Disciplina']} ({l['nameDiscVid']})</b> · {l['namePrep']} · <b>{l['nameAud']}</b>\n"
 
     return output.strip()
+
 
 def get_next_week_schedule(id_client: int, id_group: int):
     data, error = fetch_schedule(id_client, id_group)

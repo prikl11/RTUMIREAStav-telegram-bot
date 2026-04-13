@@ -3,25 +3,8 @@ from datetime import datetime, timedelta
 import sqlite3
 import requests
 
-DAYS = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"]
+from constants import DAYS, LESSON_EMOJI_LIST, LESSON_TIME_LIST
 
-LESSON_TIME_LIST = {
-    "1": "8:15-9:45",
-    "2": "9:55-11:25",
-    "3": "11:35-13:05",
-    "4": "13:30-15:00",
-    "5": "15:10-16:40",
-    "6": "16:50-18:20"
-}
-
-LESSON_EMOJI_LIST = {
-    "1": "1️⃣",
-    "2": "2️⃣",
-    "3": "3️⃣",
-    "4": "4️⃣",
-    "5": "5️⃣",
-    "6": "6️⃣"
-}
 
 def push_preps():
     conn = sqlite3.connect("users.db")
@@ -59,6 +42,7 @@ def push_preps():
     conn.commit()
     conn.close()
 
+
 def get_prep_json(id_prep: int):
     url = "https://education-ks.ru/getrasp/ajax-dropdown-style"
     params = {
@@ -84,6 +68,7 @@ def get_prep_json(id_prep: int):
         return f"Ошибка: ожидался список, а пришло:\n{data}"
 
     return data, None
+
 
 def get_prep_schedule(id_prep: int):
     data, error = get_prep_json(id_prep)
@@ -130,3 +115,4 @@ def get_prep_schedule(id_prep: int):
             output += f"{emoji} {time_str} — <b>{disc}</b> ({vid})\n · {group} · <i>{aud}</i>\n"
 
     return output.strip()
+
