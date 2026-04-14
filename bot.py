@@ -9,10 +9,12 @@ from group_api import get_group_id
 from db import init_db, get_user_group_db, read_users, set_user_group_db, get_users_number_by_groups, log_usage, get_command_usage_number, get_count_command_usage, get_usage, check_meta, update_meta, get_preps_id
 import asyncio
 from teacher_api import push_preps, get_prep_schedule
+from utils import require_admin, require_group
 
 load_dotenv()
 
 MAX_LEN = 4000
+
 
 async def send_long_message(update, text):
     lines = text.split("\n")
@@ -24,6 +26,7 @@ async def send_long_message(update, text):
         chunk += line + "\n"
     if chunk:
         await update.message.reply_text(chunk, parse_mode=ParseMode.HTML)
+
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     log_usage("/start")
@@ -39,9 +42,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• /tomorrow — расписание на завтра\n"
         "• /week — расписание на эту неделю\n"
         "• /nextweek — расписание на следующую неделю\n"
-        "• /prep <фамилия преподавателя> — расписание преподавателя на неделю\n\n"
+        "• /prep <фамилия преподавателя> — расписание преподавателя на неделю\n"
+        "• /count — оставшееся количество пар\n\n"
         "Обратная связь:\nhttps://forms.gle/k1Bvjq5DxR4BQC1U7"
         )
+
 
 async def set_group(update: Update, context: ContextTypes.DEFAULT_TYPE):
     log_usage("/group")
@@ -59,77 +64,58 @@ async def set_group(update: Update, context: ContextTypes.DEFAULT_TYPE):
     set_user_group_db(update.effective_user.id, group_name, group_id)
     await update.message.reply_text(f"Ваша группа сохранена: {group_name}!")
 
-def get_user_group(user_id: int):
-    user_data = get_user_group_db(user_id)
-    if user_data:
-        return user_data["group_id"]
-    return None
 
-async def week(update: Update, context: ContextTypes.DEFAULT_TYPE):
+@require_group
+async def week(update: Update, context: ContextTypes.DEFAULT_TYPE, group_id: int):
     log_usage("/week")
-    group_id = get_user_group(update.effective_user.id)
-    if not group_id:
-        await update.message.reply_text("⚠️ Сначала укажите группу: /group <название группы>")
-        return
-
     text = get_schedule(id_client=3, id_group=group_id)
     await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
-async def today(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    log_usage("/today")
-    group_id = get_user_group(update.effective_user.id)
-    if not group_id:
-        await update.message.reply_text("⚠️ Сначала укажите группу: /group <название группы>")
-        return
 
+@require_group
+async def today(update: Update, context: ContextTypes.DEFAULT_TYPE, group_id: int):
+    log_usage("/today")
     text = get_today_schedule(id_client=3, id_group=group_id)
     await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
-async def tomorrow(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    log_usage("/tomorrow")
-    group_id = get_user_group(update.effective_user.id)
-    if not group_id:
-        await update.message.reply_text("⚠️ Сначала укажите группу: /group <название группы>")
-        return
 
+@require_group
+async def tomorrow(update: Update, context: ContextTypes.DEFAULT_TYPE, group_id: int):
+    log_usage("/tomorrow")
     text = get_tomorrow_schedule(id_client=3, id_group=group_id)
     await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
-async def next_week(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    log_usage("/nextweek")
-    group_id = get_user_group(update.effective_user.id)
-    if not group_id:
-        await update.message.reply_text("⚠️ Сначала укажите группу: /group <название группы>")
-        return
 
+@require_group
+async def next_week(update: Update, context: ContextTypes.DEFAULT_TYPE, group_id: int):
+    log_usage("/nextweek")
     text = get_next_week_schedule(id_client=3, id_group=group_id)
     await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
+
+@require_admin
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    admin_id = int(os.getenv("ADMIN_ID"))
-    if update.effective_user.id == admin_id:
-        message = f"Количество пользователей: {read_users()}\n"
-        users_by_groups = await asyncio.get_event_loop().run_in_executor(None, get_users_number_by_groups)
+    message = f"Количество пользователей: {read_users()}\n"
+    users_by_groups = await asyncio.get_event_loop().run_in_executor(None, get_users_number_by_groups)
 
-        message += f"Количество пользователей по группам:\n"
-        for group, count in users_by_groups.items():
-            message += f"{group}: {count}\n"
+    message += f"Количество пользователей по группам:\n"
+    for group, count in users_by_groups.items():
+        message += f"{group}: {count}\n"
 
-        await update.message.reply_text(message, parse_mode=ParseMode.HTML)
-        return
+    await update.message.reply_text(message, parse_mode=ParseMode.HTML)
 
+@require_admin
 async def commands_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    admin_id = int(os.getenv("ADMIN_ID"))
-    if update.effective_user.id == admin_id:
-        message = f"Команд использовано: {get_count_command_usage()}\n"
+    message = f"Команд использовано: {get_count_command_usage()}\n"
 
-        message += f"Использование команд:\n"
+    message += f"Использование команд:\n"
 
-        usage = await asyncio.get_event_loop().run_in_executor(None, get_command_usage_number)
-        for command, count in usage.items():
-            message += f"{command}: {count}\n"
+    usage = await asyncio.get_event_loop().run_in_executor(None, get_command_usage_number)
+    for command, count in usage.items():
+        message += f"{command}: {count}\n"
 
-        await update.message.reply_text(message, parse_mode=ParseMode.HTML)
+    await update.message.reply_text(message, parse_mode=ParseMode.HTML)
+
 
 async def get_teacher_rasp(update: Update, context: ContextTypes.DEFAULT_TYPE):
     log_usage("/prep")
@@ -148,6 +134,7 @@ async def get_teacher_rasp(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = get_prep_schedule(prep_id)
     await send_long_message(update, text)
 
+
 async def periodic_update_preps(context: ContextTypes.DEFAULT_TYPE):
     try:
         last_update = check_meta()
@@ -164,20 +151,16 @@ async def periodic_update_preps(context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         print(f"ERROR: {e}")
 
+
+@require_admin
 async def usage(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    admin_id = int(os.getenv("ADMIN_ID"))
-    if update.effective_user.id == admin_id:
-        period = context.args[0]
-        await update.message.reply_text(f"В течение данного периода использовано команд: {get_usage(period)}")
+    period = context.args[0]
+    await update.message.reply_text(f"В течение данного периода использовано команд: {get_usage(period)}")
 
 
-async def count(update: Update, context: ContextTypes.DEFAULT_TYPE):
+@require_group
+async def count(update: Update, context: ContextTypes.DEFAULT_TYPE, group_id: int):
     log_usage("/count")
-    group_id = get_user_group(update.effective_user.id)
-    if not group_id:
-        await update.message.reply_text("⚠️ Сначала укажите группу: /group <название группы>")
-        return
-
     text = count_all_lessons(id_client=3, id_group=group_id)
     await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 

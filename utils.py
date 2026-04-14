@@ -1,7 +1,16 @@
 from collections import defaultdict
 from datetime import date, datetime
-from constants import LESSON_EMOJI_LIST, LESSON_TIME_LIST, DAYS
 import requests
+from functools import wraps
+from telegram import Update
+from telegram.ext import ContextTypes
+import os
+from dotenv import load_dotenv
+
+from constants import LESSON_EMOJI_LIST, LESSON_TIME_LIST, DAYS
+from db import get_user_group_db
+
+load_dotenv()
 
 
 def _get_schedule_for_range(data: list, start: date, end: date) -> str:
@@ -54,3 +63,31 @@ def fetch_schedule(id_client: int, id_group: int):
         return f"Ошибка: ожидался список, а пришло:\n{data}"
 
     return data, None
+
+
+def get_user_group(user_id: int):
+    user_data = get_user_group_db(user_id)
+    if user_data:
+        return user_data["group_id"]
+    return None
+
+
+def require_group(func):
+    @wraps(func)
+    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        group_id = get_user_group(update._effective_user.id)
+        if not group_id:
+            await update.message.reply_text("⚠️ Сначала укажите группу: /group <название группы>")
+            return
+        return await func(update, context, group_id)
+    return wrapper
+
+
+def require_admin(func):
+    @wraps(func)
+    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if update.effective_user.id != int(os.getenv("ADMIN_ID")):
+            return
+        return await func(update, context)
+    return wrapper
+

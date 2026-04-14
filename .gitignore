@@ -32,4 +32,4 @@ env/
 .env.*
 
 # Database file
-userd.db
+users.db
