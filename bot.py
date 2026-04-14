@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from telegram.constants import ParseMode
-from schedule_api import get_schedule, get_today_schedule, get_tomorrow_schedule, get_next_week_schedule
+from schedule_api import get_schedule, get_today_schedule, get_tomorrow_schedule, get_next_week_schedule, count_all_lessons
 import os
 from dotenv import load_dotenv
 from group_api import get_group_id
@@ -170,6 +170,18 @@ async def usage(update: Update, context: ContextTypes.DEFAULT_TYPE):
         period = context.args[0]
         await update.message.reply_text(f"В течение данного периода использовано команд: {get_usage(period)}")
 
+
+async def count(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    log_usage("/count")
+    group_id = get_user_group(update.effective_user.id)
+    if not group_id:
+        await update.message.reply_text("⚠️ Сначала укажите группу: /group <название группы>")
+        return
+
+    text = count_all_lessons(id_client=3, id_group=group_id)
+    await update.message.reply_text(text, parse_mode=ParseMode.HTML)
+
+
 if __name__ == "__main__":
     init_db()
 
@@ -186,6 +198,7 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("commands", commands_stats))
     app.add_handler(CommandHandler("usage", usage))
     app.add_handler(CommandHandler("prep", get_teacher_rasp))
+    app.add_handler(CommandHandler("count", count))
 
     job_queue = app.job_queue
     job_queue.run_repeating(periodic_update_preps, interval=7 * 24 * 60 * 60, first=10)
