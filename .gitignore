@@ -33,3 +33,5 @@ env/
 
 # Database file
 users.db
+*.db
+*.sqlite3

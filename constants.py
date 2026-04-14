@@ -20,3 +20,5 @@ LESSON_EMOJI_LIST = {
     "6": "6️⃣",
     "7": "7️⃣",
 }
+
+DB_PATH = "users.db"
